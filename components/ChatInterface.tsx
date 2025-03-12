@@ -283,7 +283,7 @@ export default function ChatInterface() {
                 className="data-[state=checked]:bg-indigo-500"
                 onCheckedChange={handleConsultantModeChange}
               />
-              <span className="text-sm text-gray-300">Consultant Mode</span>
+              <span className="text-blue-500 font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">Consultant Mode</span>
             </div>
           </div>
         </motion.div>
