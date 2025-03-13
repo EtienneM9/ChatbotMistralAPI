@@ -496,10 +496,7 @@ export default function ChatInterface() {
                 disabled={isLoading}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg shadow-indigo-500/20"
               >
-                <motion.div
-                  animate={isLoading ? { rotate: 360 } : {}}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
+                <motion.div>
                   <Send className="w-5 h-5" />
                 </motion.div>
               </Button>
