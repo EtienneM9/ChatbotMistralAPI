@@ -1,42 +1,15 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import '../app/globals.css'  // Adjust path as needed
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { nightOwl } from "react-syntax-highlighter/dist/esm/styles/prism";
+
 import { MessageSquare, Send, Bot, PlusCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Function to format numbered lists in the text
-const formatMessage = (text: string) => {
-  // Split the text into lines
-  const lines = text.split('\n');
-  
-  // Process each line
-  return lines.map((line, i) => {
-    // Check if line starts with a number followed by a dot
-    const numberMatch = line.match(/^(\d+)\.\s+(.+)/);
-    if (numberMatch) {
-      return (
-        <div key={i} className="flex items-start space-x-2 mt-1">
-          <span className="text-blue-400">{numberMatch[1]}.</span>
-          <span>{numberMatch[2]}</span>
-        </div>
-      );
-    }
-    // Check if line starts with a dash or asterisk (bullet points)
-    if (line.trim().match(/^[-*]\s+/)) {
-      return (
-        <div key={i} className="flex items-start space-x-2 mt-1 ml-2">
-          <span className="text-blue-400">•</span>
-          <span>{line.trim().replace(/^[-*]\s+/, '')}</span>
-        </div>
-      );
-    }
-    // Regular text
-    return line.trim() && <p key={i} className="mt-1">{line}</p>;
-  });
-};
 
 interface Message {
   role: 'user' | 'assistant';
@@ -47,6 +20,19 @@ interface Message {
 interface ConsultantState {
   phase: 'clarification' | 'proposal' | 'detailed' | null;
   lastProposal: string | null;
+}
+
+interface CodeBlock {
+  language: string;
+  content: string;
+  id: string;
+}
+
+interface ProcessedContent {
+  type: 'text' | 'code';
+  content: string;
+  language?: string;
+  id?: string;
 }
 
 export default function ChatInterface() {
@@ -61,6 +47,110 @@ export default function ChatInterface() {
     phase: null,
     lastProposal: null
   });
+
+  // Process message content to separate code blocks and text
+  const processContent = (text: string): ProcessedContent[] => {
+    const lines = text.split('\n');
+    const processed: ProcessedContent[] = [];
+    let currentBlock: ProcessedContent = { type: 'text', content: '' };
+    
+    lines.forEach((line, index) => {
+      const codeBlockMatch = line.trim().match(/^```(\w*)$/);
+      
+      if (codeBlockMatch) {
+        if (currentBlock.type === 'code') {
+          // End of code block
+          if (currentBlock.content.trim()) {
+            processed.push(currentBlock);
+          }
+          currentBlock = { type: 'text', content: '' };
+        } else {
+          // Start of code block
+          if (currentBlock.content.trim()) {
+            processed.push(currentBlock);
+          }
+          currentBlock = {
+            type: 'code',
+            language: codeBlockMatch[1] || 'plaintext',
+            content: '',
+            id: `code-${Date.now()}-${index}`
+          };
+        }
+      } else {
+        currentBlock.content += line + '\n';
+      }
+    });
+
+    if (currentBlock && currentBlock.content.trim()) {
+      processed.push(currentBlock);
+    }
+
+    return processed;
+  };
+
+  // Copy code to clipboard
+  const copyToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code);
+    alert("Code copied to clipboard!");
+  };
+
+  // Function to format Code block, numbered lists...
+  const formatTextContent = (text: string) => {
+    const lines = text.split('\n');
+    return lines.map((line, i) => {
+      // Check if line starts with a number followed by a dot
+      const numberMatch = line.match(/^(\d+)\.\s+(.+)/);
+      if (numberMatch) {
+        return (
+          <div key={i} className="flex items-start space-x-2 mt-1">
+            <span className="text-blue-400">{numberMatch[1]}.</span>
+            <span>{numberMatch[2]}</span>
+          </div>
+        );
+      }
+      // Check if line starts with a dash or asterisk (bullet points)
+      if (line.trim().match(/^[-*]\s+/)) {
+        return (
+          <div key={i} className="flex items-start space-x-2 mt-1 ml-2">
+            <span className="text-blue-200">•</span>
+            <span>{line.trim().replace(/^[-*]\s+/, '')}</span>
+          </div>
+        );
+      }
+      
+      // Regular text
+      return line.trim() && <p key={i} className="mt-1">{line}</p>;
+    });
+  };
+
+  // Format the entire message content
+  const formatMessage = (text: string) => {
+    const processed = processContent(text);
+    
+    return processed.map((block, index) => {
+      if (block.type === 'text') {
+        return <div key={index}>{formatTextContent(block.content)}</div>;
+      } else {
+        return (
+          <div key={block.id} className="relative max-w-full w-full overflow-x-auto my-2 rounded-lg border border-gray-600/30 shadow-lg scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+            <button
+              onClick={() => copyToClipboard(block.content)}
+              className="absolute right-2 top-2 bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm transition-colors"
+            >
+              📋 Copy
+            </button>
+            <SyntaxHighlighter
+              language={block.language}
+              style={nightOwl}
+              className="!mt-0 !mb-0 rounded-lg text-xs scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+            >
+              {block.content.trim()}
+            </SyntaxHighlighter>
+          </div>
+        );
+      }
+    });
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -175,7 +265,7 @@ export default function ChatInterface() {
   }, [input, messages, isConsultantMode, projectId, consultantState]);
 
   return (
-    <div className="flex flex-col h-[80vh] w-full max-w-4xl relative overflow-hidden">
+    <div className="flex flex-col h-[90vh] w-full max-w-6xl relative overflow-hidden">
       {/* Animated background */}
       <div className="absolute inset-0 bg-gray-900 z-0">
         <div className="absolute inset-0 opacity-20">
@@ -314,7 +404,7 @@ export default function ChatInterface() {
                 }`}
               >
                 <div
-                  className={`max-w-[70%] rounded-2xl p-3 shadow-lg ${
+                  className={`max-w-[60%] rounded-2xl p-3 shadow-lg ${
                     message.role === 'user'
                       ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
                       : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-100'
@@ -341,7 +431,7 @@ export default function ChatInterface() {
                         />
                       </div>
                     )}
-                    <div className="prose prose-invert prose-slate max-w-none 
+                    <div className="prose prose-invert prose-slate max-w-none w-full overflow-hidden 
                       prose-headings:text-gray-100 
                       prose-p:text-gray-100 
                       prose-strong:text-gray-100

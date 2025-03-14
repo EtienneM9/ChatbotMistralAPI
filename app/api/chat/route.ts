@@ -55,6 +55,7 @@ const SYSTEM_MESSAGES = {
 
     Real-world Example:
     [Provide a concrete example of successful implementation]`
+    
 };
 
 interface ConsultantState {
