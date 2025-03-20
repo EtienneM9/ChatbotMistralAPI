@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import MistralAI from '@mistralai/mistralai';
 
+export const config = {
+  runtime: "nodejs", // This ensures it runs as a serverless function
+};
+
 // System messages for different phases
 const SYSTEM_MESSAGES = {
   default: `You are a helpful assistant focused on providing clear and concise responses.
