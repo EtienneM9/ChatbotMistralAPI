@@ -8,13 +8,12 @@ export default function Home() {
   console.log("isExpanded state in Page.tsx:", isEditorOpen);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-indigo-950/90">
       <div className="relative w-full h-screen">
         <div className='w-full flex flex-col justify-center items-center'>
           <motion.h1 className="relative text-3xl font-bold text-blue-500 text-center mb-8"
-          style={{ width: '50vw' }}
-          initial={{ left: '50vw' }} 
-          animate={isEditorOpen ? { left: '10px', width: '59vw' } : { left: '25vw' }}
+          style={{ width: '40vw' }}
+          animate={isEditorOpen ? { left: '-29vw', width: '59vw' } : { left: '0vw' }}
           transition={{ type: 'spring', stiffness: 100 }}
           >
             AI Consultant Chat

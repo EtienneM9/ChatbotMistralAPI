@@ -136,7 +136,7 @@ export default function ChatInterface({ isEditorOpen, setIsEditorOpen }: ChatInt
         return (
           <div key={i} className="flex items-start space-x-2 mt-1">
             <span className="text-blue-400">{numberMatch[1]}.</span>
-            <span className='text-cyan-100'>{numberMatch[2]}</span>
+            <span className='text-white'>{numberMatch[2]}</span>
           </div>
         );
       }
@@ -148,7 +148,7 @@ export default function ChatInterface({ isEditorOpen, setIsEditorOpen }: ChatInt
           </div>
         );
       }
-      return line.trim() && <p key={i} className="mt-1">{line}</p>;
+      return line.trim() && <p key={i} className="mt-1 text-white">{line}</p>;
     });
   };
 

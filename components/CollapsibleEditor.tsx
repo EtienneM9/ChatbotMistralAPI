@@ -45,7 +45,7 @@ export default function CollapsibleEditor({ files, onClose }: CollapsibleEditorP
         height: '100%',
         zIndex: 50
       }}
-      className="bg-gray-900 border-l border-gray-700/50 shadow-xl"
+      className="bg-gray-800/90 border-l border-gray-700/50 shadow-xl"
     >
       {/* Additional Close Button (Top Left) */}
       <motion.div 
@@ -58,7 +58,7 @@ export default function CollapsibleEditor({ files, onClose }: CollapsibleEditorP
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="bg-gray-800/80 hover:bg-gray-700 rounded-full"
+          className="bg-red-900/60 hover:bg-red-700 rounded-full"
         >
           <X className="w-5 h-5" />
         </Button>
