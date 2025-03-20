@@ -1,31 +1,36 @@
-"use client";
+'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import '../app/globals.css'  // Adjust path as needed
+import '../app/globals.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { nightOwl } from "react-syntax-highlighter/dist/esm/styles/prism";
-
 import { MessageSquare, Send, Bot, PlusCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CollapsibleEditor from './CollapsibleEditor';
+import FileButton from './FileButton';
+
+/* test prompt:
+Give me three tsx files using tailwind for a login page, a register page and a profile page
+*/
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   id: string;
+  type?: 'collapsible';
+  files?: {
+    name: string;
+    content: string;
+    language: string;
+  }[];
 }
 
 interface ConsultantState {
   phase: 'clarification' | 'proposal' | 'detailed' | null;
   lastProposal: string | null;
-}
-
-interface CodeBlock {
-  language: string;
-  content: string;
-  id: string;
 }
 
 interface ProcessedContent {
@@ -35,7 +40,12 @@ interface ProcessedContent {
   id?: string;
 }
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  isEditorOpen: boolean;
+  setIsEditorOpen: (value: boolean) => void;
+}
+
+export default function ChatInterface({ isEditorOpen, setIsEditorOpen }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -43,10 +53,30 @@ export default function ChatInterface() {
   const [projectId, setProjectId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFiles, setActiveFiles] = useState<Message['files']>([]);
   const [consultantState, setConsultantState] = useState<ConsultantState>({
     phase: null,
     lastProposal: null
   });
+
+  const openEditor = () => setIsEditorOpen(true);
+  const closeEditor = () => setIsEditorOpen(false);
+
+
+  // Handle opening/closing the editor with file content
+  const handleOpenEditor = (files: Message['files']) => {
+    if (files && files.length > 0) {
+      if (isEditorOpen && JSON.stringify(activeFiles) === JSON.stringify(files)) {
+        // Close if clicking same files
+        closeEditor();
+        setActiveFiles([]);
+      } else {
+        // Open with new files
+        setActiveFiles(files);
+        openEditor();
+      }
+    }
+  };
 
   // Process message content to separate code blocks and text
   const processContent = (text: string): ProcessedContent[] => {
@@ -96,19 +126,20 @@ export default function ChatInterface() {
 
   // Function to format Code block, numbered lists...
   const formatTextContent = (text: string) => {
-    const lines = text.split('\n');
+    const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
+    const textWithoutCodeBlocks = text.replace(codeBlockRegex, '');
+
+    const lines = textWithoutCodeBlocks.split('\n');
     return lines.map((line, i) => {
-      // Check if line starts with a number followed by a dot
       const numberMatch = line.match(/^(\d+)\.\s+(.+)/);
       if (numberMatch) {
         return (
           <div key={i} className="flex items-start space-x-2 mt-1">
             <span className="text-blue-400">{numberMatch[1]}.</span>
-            <span>{numberMatch[2]}</span>
+            <span className='text-cyan-100'>{numberMatch[2]}</span>
           </div>
         );
       }
-      // Check if line starts with a dash or asterisk (bullet points)
       if (line.trim().match(/^[-*]\s+/)) {
         return (
           <div key={i} className="flex items-start space-x-2 mt-1 ml-2">
@@ -117,16 +148,33 @@ export default function ChatInterface() {
           </div>
         );
       }
-      
-      // Regular text
       return line.trim() && <p key={i} className="mt-1">{line}</p>;
     });
   };
 
   // Format the entire message content
-  const formatMessage = (text: string) => {
-    const processed = processContent(text);
-    
+  const formatMessage = (message: Message) => {
+    console.log("message", message);
+    if (message.type === 'collapsible' && message.files) {
+      console.log("Found collapsible message:", message);
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 mt-2">
+            {message.files.map((file) => (
+              <FileButton
+                key={file.name}
+                fileName={file.name}
+                language={file.language}
+                onClick={() => handleOpenEditor(message.files)}
+              />
+            ))}
+          </div>
+          {formatTextContent(message.content)}
+        </div>
+      );
+    }
+
+    const processed = processContent(message.content);
     return processed.map((block, index) => {
       if (block.type === 'text') {
         return <div key={index}>{formatTextContent(block.content)}</div>;
@@ -164,13 +212,14 @@ export default function ChatInterface() {
     setMessages([]);
     setInput('');
     setError(null);
+    setIsEditorOpen(false);
+    setActiveFiles([]);
     setConsultantState({
       phase: isConsultantMode ? 'clarification' : null,
       lastProposal: null
     });
   };
 
-  // Reset consultant state when toggling mode
   const handleConsultantModeChange = (checked: boolean) => {
     setIsConsultantMode(checked);
     if (checked) {
@@ -218,28 +267,29 @@ export default function ChatInterface() {
         throw new Error(data.error);
       }
 
-      if (data.choices?.[0]?.message?.content) {
-        const assistantMessage = data.choices[0].message.content;
+      if (data.choices?.[0]?.message) {
+        const assistantMessage = data.choices[0].message;
+        console.log("Received assistant message:", assistantMessage);
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          content: assistantMessage,
-          id: Date.now().toString()
+          content: assistantMessage.content,
+          id: Date.now().toString(),
+          type: assistantMessage.type,
+          files: assistantMessage.files
         }]);
 
         if (isConsultantMode) {
-          // Update consultant state based on message content
-          // Transition to proposal phase when AI provides recommendations
-          if (assistantMessage.toLowerCase().includes('would you like a more detailed explanation') ||
+          if (assistantMessage.content.toLowerCase().includes('would you like a more detailed explanation') ||
               (consultantState.phase === 'clarification' && 
-               !assistantMessage.toLowerCase().includes('please clarify') &&
-               !assistantMessage.toLowerCase().includes('could you provide more details'))) {
+               !assistantMessage.content.toLowerCase().includes('please clarify') &&
+               !assistantMessage.content.toLowerCase().includes('could you provide more details'))) {
             setConsultantState(prev => ({
               ...prev,
               phase: 'proposal',
-              lastProposal: assistantMessage
+              lastProposal: assistantMessage.content
             }));
-          } else if (assistantMessage.toLowerCase().includes('could you please clarify') ||
-                    assistantMessage.toLowerCase().includes('could you provide more details')) {
+          } else if (assistantMessage.content.toLowerCase().includes('could you please clarify') ||
+                    assistantMessage.content.toLowerCase().includes('could you provide more details')) {
             setConsultantState(prev => ({
               ...prev,
               phase: 'clarification'
@@ -265,120 +315,92 @@ export default function ChatInterface() {
   }, [input, messages, isConsultantMode, projectId, consultantState]);
 
   return (
-    <div className="flex flex-col h-[90vh] w-full max-w-6xl relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 bg-gray-900 z-0">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-transparent to-transparent"></div>
-          <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-900/30 via-transparent to-transparent"></div>
-        </div>
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
-        <div className="absolute top-0 bottom-0 left-0 w-px bg-gradient-to-b from-transparent via-indigo-500 to-transparent opacity-50"></div>
-        <div className="absolute top-0 bottom-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-500 to-transparent opacity-50"></div>
-      </div>
-
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {[...Array(15)].map((_, i) => (
-          <div 
-            key={i}
-            className="absolute rounded-full opacity-20"
-            style={{
-              width: `${Math.random() * 10 + 5}px`,
-              height: `${Math.random() * 10 + 5}px`,
-              background: i % 3 === 0 ? '#6366f1' : i % 3 === 1 ? '#3b82f6' : '#8b5cf6',
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${Math.random() * 10 + 20}s linear infinite`,
-              animationDelay: `${Math.random() * 5}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Chat container */}
+    <div className="flex h-[90vh] w-full relative overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      {/* Chat Area */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col h-full bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-2xl z-10 relative overflow-hidden"
-      >
+        style={{ width: '50vw' }}
+        initial={{ left: '50vw' }} 
+        animate={isEditorOpen ? { left: '10px', width: '40vw' } : { left: '23vw' }}
+        transition={{ type: 'spring', stiffness: 100 }}
+        className="flex flex-col ml-10 top-0 w-full h-full bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-2xl absolute overflow-hidden"
+      > 
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="p-4 border-b border-gray-700/50 backdrop-blur-sm bg-gradient-to-r from-gray-800/90 via-gray-800/95 to-gray-800/90"
+          className="border-b border-gray-700/50 backdrop-blur-sm bg-gradient-to-r from-gray-800/90 via-gray-800/95 to-gray-800/90"
         >
-          <div className="flex items-center justify-between mb-2">
-            <motion.div 
-              className="flex items-center space-x-2"
-              initial={{ x: -20 }}
-              animate={{ x: 0 }}
-              transition={{ delay: 0.3, type: "spring" }}
-            >
-              <div className="relative">
-                <Bot className="w-6 h-6 text-blue-500" />
-                <motion.div 
-                  className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    opacity: [0.7, 1, 0.7]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </div>
-              <span className="text-blue-500 font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">Chat Assistant</span>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                onClick={handleNewChat}
-                variant="ghost"
-                className="text-gray-300 hover:text-white hover:bg-gray-700/70 transition-all duration-300 ease-out"
-                size="sm"
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <motion.div 
+                className="flex items-center space-x-2"
+                initial={{ x: -20 }}
+                animate={{ x: 0 }}
+                transition={{ delay: 0.3, type: "spring" }}
               >
-                <PlusCircle className="w-4 h-4 mr-2" />
-                New Chat
-              </Button>
-            </motion.div>
-          </div>
-          <div className="flex items-center justify-end space-x-4">
-            {isConsultantMode && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Input
-                  type="text"
-                  placeholder="Project ID"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  className="w-32 bg-gray-700/70 text-white border-gray-600/50 focus:border-indigo-500/70 transition-all duration-300"
-                />
+                <div className="relative">
+                  <Bot className="w-6 h-6 text-blue-500" />
+                  <motion.div 
+                    className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.7, 1, 0.7]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                </div>
+                <span className="text-blue-500 font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">AI Consultant Chat</span>
               </motion.div>
-            )}
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={isConsultantMode}
-                className="data-[state=checked]:bg-indigo-500"
-                onCheckedChange={handleConsultantModeChange}
-              />
-              <span className="text-blue-500 font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">Consultant Mode</span>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  onClick={handleNewChat}
+                  variant="ghost"
+                  className="text-gray-300 hover:text-white hover:bg-gray-700/70 transition-all duration-300 ease-out"
+                  size="sm"
+                >
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  New Chat
+                </Button>
+              </motion.div>
+            </div>
+            <div className="flex items-center justify-end space-x-4">
+              {isConsultantMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Input
+                    type="text"
+                    placeholder="Project ID"
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-32 bg-gray-700/70 text-white border-gray-600/50 focus:border-indigo-500/70 transition-all duration-300"
+                  />
+                </motion.div>
+              )}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={isConsultantMode}
+                  className="data-[state=checked]:bg-indigo-500"
+                  onCheckedChange={handleConsultantModeChange}
+                />
+                <span className="text-blue-500 font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">Consultant Mode</span>
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Messages */}
+        {/* Messages Container */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           <AnimatePresence>
             {messages.map((message, index) => (
@@ -404,7 +426,7 @@ export default function ChatInterface() {
                 }`}
               >
                 <div
-                  className={`max-w-[60%] rounded-2xl p-3 shadow-lg ${
+                  className={`max-w-[80%] rounded-2xl p-3 shadow-lg ${
                     message.role === 'user'
                       ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
                       : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-100'
@@ -431,16 +453,8 @@ export default function ChatInterface() {
                         />
                       </div>
                     )}
-                    <div className="prose prose-invert prose-slate max-w-none w-full overflow-hidden 
-                      prose-headings:text-gray-100 
-                      prose-p:text-gray-100 
-                      prose-strong:text-gray-100
-                      prose-ul:text-gray-100 prose-ol:text-gray-100
-                      prose-li:marker:text-blue-400
-                      [&>ul]:pl-4 [&>ol]:pl-4
-                      [&>ul>li]:pl-2 [&>ol>li]:pl-2
-                      [&>ul>li]:mt-2 [&>ol>li]:mt-2">
-                      {formatMessage(message.content)}
+                    <div className="prose prose-invert prose-slate max-w-none w-full overflow-hidden">
+                      {formatMessage(message)}
                     </div>
                     {message.role === 'user' && (
                       <div className="relative">
@@ -489,39 +503,24 @@ export default function ChatInterface() {
                       />
                     </div>
                     <div className="flex space-x-1">
-                      <motion.div 
-                        className="w-2 h-2 rounded-full bg-blue-500"
-                        animate={{ 
-                          y: [0, -5, 0],
-                        }}
-                        transition={{ 
-                          duration: 0.6,
-                          repeat: Infinity,
-                          delay: 0
-                        }}
-                      />
-                      <motion.div 
-                        className="w-2 h-2 rounded-full bg-indigo-500"
-                        animate={{ 
-                          y: [0, -5, 0],
-                        }}
-                        transition={{ 
-                          duration: 0.6,
-                          repeat: Infinity,
-                          delay: 0.2
-                        }}
-                      />
-                      <motion.div 
-                        className="w-2 h-2 rounded-full bg-violet-500"
-                        animate={{ 
-                          y: [0, -5, 0],
-                        }}
-                        transition={{ 
-                          duration: 0.6,
-                          repeat: Infinity,
-                          delay: 0.4
-                        }}
-                      />
+                      {[0, 0.2, 0.4].map((delay, i) => (
+                        <motion.div
+                          key={i}
+                          className={`w-2 h-2 rounded-full ${
+                            i === 0
+                              ? "bg-blue-500"
+                              : i === 1
+                              ? "bg-indigo-500"
+                              : "bg-violet-500"
+                          }`}
+                          animate={{ y: [0, -5, 0] }}
+                          transition={{
+                            duration: 0.6,
+                            repeat: Infinity,
+                            delay: delay,
+                          }}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -594,6 +593,19 @@ export default function ChatInterface() {
           </div>
         </motion.form>
       </motion.div>
+
+      {/* Collapsible Editor */}
+      <AnimatePresence>
+        {isEditorOpen && activeFiles && (
+          <CollapsibleEditor
+            files={activeFiles}
+            onClose={() => {
+              setIsEditorOpen(false);
+              setActiveFiles([]);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

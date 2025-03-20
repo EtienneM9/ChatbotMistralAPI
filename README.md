@@ -72,6 +72,23 @@ npm run dev
    - In-depth technical explanations
    - Implementation considerations
    - Best practices and optimization suggestions
+   - Interactive code examples with collapsible editor
+
+### Collapsible Editor Feature ✨
+The chat interface now includes a powerful collapsible editor that provides:
+- Side-by-side view of chat and code
+- Multi-file support with tabs
+- Syntax highlighting for various languages
+- Copy-to-clipboard functionality
+- Smooth animations and transitions
+- File-specific language indicators
+
+When the AI provides multiple code files, they appear as clickable buttons in the chat. Clicking a file button opens the collapsible editor with:
+- Full-screen code view
+- Easy navigation between files
+- Code highlighting and formatting
+- Ability to copy entire files
+- Seamless integration with the chat flow
 
 ## Technical Implementation 🛠️
 
@@ -90,6 +107,7 @@ Key features:
 - Dark mode optimized
 - Animated user experience
 - Simple and intuitive
+- Collapsible code editor with multi-file support
 
 ### API Integration
 
@@ -110,13 +128,30 @@ const response = await fetch('/api/chat', {
 });
 ```
 
-### Message Processing
+### Message Types and Processing
+
+Messages can now be of two types:
+1. Regular messages with inline code blocks
+2. Collapsible messages containing multiple files:
+```typescript
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  type?: 'collapsible';
+  files?: {
+    name: string;
+    content: string;
+    language: string;
+  }[];
+}
+```
 
 Messages are processed and formatted for optimal readability:
 - Numbered lists are properly indented and styled
 - Bullet points use consistent formatting
 - Code blocks are syntax highlighted
 - Technical diagrams (when included) are properly rendered
+- Multiple files are organized into an interactive UI
 
 ### State Management
 
@@ -127,6 +162,8 @@ The chat maintains several state elements:
 - Project context
 - Loading states
 - Error handling
+- Editor state (open/closed)
+- Active files management
 
 ## Features Overview 🌟
 
@@ -135,6 +172,7 @@ The chat maintains several state elements:
 - Message history management
 - New chat functionality
 - Error handling and recovery
+- Collapsible code editor
 
 ### Consultant Mode Capabilities
 - Three-phase conversation flow
@@ -154,6 +192,9 @@ The chat maintains several state elements:
 - Error notifications
 - Message formatting
 - Auto-scrolling
+- Smooth transitions
+- Interactive code display
+- Multi-file management
 
 ## Contributing 🤝
 
