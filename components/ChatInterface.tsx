@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CollapsibleEditor from './CollapsibleEditor';
 import FileButton from './FileButton';
 
-/* test prompt:
+/* test prompt: 
 Give me three tsx files using tailwind for a login page, a register page and a profile page
 */
 
