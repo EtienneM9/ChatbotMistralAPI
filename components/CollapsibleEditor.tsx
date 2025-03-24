@@ -118,6 +118,7 @@ export default function CollapsibleEditor({ files, onClose }: CollapsibleEditorP
                 <SyntaxHighlighter
                   language={file.language}
                   style={nightOwl}
+                  wrapLines
                   className="!mt-0 !bg-transparent scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
                 >   
                   {file.content}
