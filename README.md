@@ -45,6 +45,13 @@ npm run dev
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+### Built With
+
+* [![Next][Next.js]][Next-url]
+* [![React][React.js]][React-url]
+* [![Tailwindcss][Tailwindcss.io]][Tailwindcss-url]
+* [![MistralAI].[MistralAI.io].[MistralAI-url].
+
 ## Usage Guide 📘
 
 ### Basic Chat Mode
