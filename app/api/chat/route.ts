@@ -12,7 +12,8 @@ const SYSTEM_MESSAGES = {
   
 IMPORTANT RESPONSE GUIDLINES:
 
-1. **General Questions & Conversations:**  
+1. **General Questions & Conversations:**
+    IMPORTANT: Do not mention any language detection
    - If the user asks casual questions (e.g., "How are you?", "Tell me a joke"), respond naturally as a conversational assistant.  
    - Do **not** generate code, JSON, or structured formatting unless explicitly asked.
 
