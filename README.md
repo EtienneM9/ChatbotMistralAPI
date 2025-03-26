@@ -49,8 +49,9 @@ npm run dev
 
 * [![Next][Next.js]][Next-url]
 * [![React][React.js]][React-url]
-* [![Tailwindcss][Tailwindcss.io]][Tailwindcss-url]
-* [![MistralAI].[MistralAI.io].[MistralAI-url].
+* [![Tailwindcss][Tailwindcss]][Tailwindcss-url]
+* [![Framer-motion][Framer-motion][framer-url]
+* [![MistralAI].[MistralAI].[MistralAI-url]
 
 ## Usage Guide 📘
 
@@ -211,6 +212,16 @@ This project is part of a larger personal initiative, but contributions are welc
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
+[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
+[Next-url]: https://nextjs.org/
+[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[React-url]: https://reactjs.org/
+[Tailwindcss]: https://img.shields.io/badge/tailwindcss-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white
+[Tailwindcss-url]: https://tailwindcss.com/
+[Framer-motion]: https://img.shields.io/badge/framer--motion-0055FF?style=for-the-badge&logo=framer&logoColor=white
+[framer-url]: https://motion.dev/docs/framer
+[MistralAI]: https://img.shields.io/badge/MistralAI-000000?style=for-the-badge&logo=mistral&logoColor=white
+[MistralAI-url]: https://docs.mistral.ai/api/
 ---
 
 *Note: This chat interface is part of a broader project focused on developing AI-powered development tools and assistants. The consultant mode showcases how AI can provide structured, technical guidance while maintaining context and following a clear conversation flow.*
