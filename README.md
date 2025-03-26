@@ -50,8 +50,8 @@ npm run dev
 * [![Next][Next.js]][Next-url]
 * [![React][React.js]][React-url]
 * [![Tailwindcss][Tailwindcss]][Tailwindcss-url]
-* [![Framer-motion][Framer-motion][framer-url]
-* [![MistralAI].[MistralAI].[MistralAI-url]
+* [![Framer-motion][Framer-motion]][framer-url]
+* [![MistralAI][MistralAI]][MistralAI-url]
 
 ## Usage Guide 📘
 
